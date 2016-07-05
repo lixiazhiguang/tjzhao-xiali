@@ -1,4 +1,5 @@
-import networkx as nx
+# import networkx as nx
+from time import clock
 import numpy as np
 import itertools
 import pprint
@@ -166,6 +167,7 @@ def main():
 
 	node_list = read_file(community_file, neighbor_file, rank_file)
 
+	start = clock()
 	print 'initial'
 	for node in node_list:
 		node.initial()
@@ -186,6 +188,9 @@ def main():
 		print 'difference', diff_count
 		if diff_count < epsilon:
 			break
+
+	end = clock()
+	print 'HIS:', end - start
 
 	write_file(result_file, node_list)
 
