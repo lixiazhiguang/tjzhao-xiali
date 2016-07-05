@@ -31,8 +31,8 @@ def read_file(file_name):
 			items = line.split(' ')
 			fm = int(items[0])
 			to = int(items[1])
-			node_list.[fm].add_neighbor(to)
-			node_list.[to].add_neighbor(fm)
+			node_list[fm].add_neighbor(to)
+			node_list[to].add_neighbor(fm)
 	
 			if i % 100000 == 0:
 				print i
