@@ -1,190 +1,201 @@
 import networkx as nx
 import numpy as np
-import itertools
-import pprint
-import csv
+from time import clock
+import heapq
+
+
+beta_table = [0, 0, 0.17, 0.25, 0.29, 0.30, 0.35]
+def get_beta(length):
+	try:
+		return beta_table[length]
+	except IndexError, e:
+		return 0.35
+
+
+def count_bit(num):
+	count = 0
+	while num > 0:
+		num &= (num - 1)
+		count += 1
+	return count
+
+
+eps = 1e-13
+community_num = 6
+alpha = 0.3
+S_num = 2 ** community_num
+betas = np.array([get_beta(count_bit(S)) for S in xrange(0, S_num)])
+C_indexes = [[S for S in xrange(S_num) if S & (1<<c)] for c in xrange(community_num)]
+
 
 def use_pagerank(read_file_name, write_file_name):
 	G = nx.Graph()
 
 	with open(read_file_name) as fp:
-		for num, line in enumerate(fp):
-			if num < 4:
-				continue
-			items = line.split('\t')
+		first_line = fp.readline()
+		for line in fp:
+			items = line.split(' ')
 			i = int(items[0])
 			j = int(items[1])
 			G.add_edge(i, j)
-			if num % 100000 == 0:
-				print 'line', num
 
-	pr = nx.pagerank(G)
+	print 'Running PageRank'
+	start = clock()
+	rank = nx.pagerank(G)
+	end = clock()
+	print 'PageRank running time:', end - start
 	
 	with open(write_file_name, 'w') as fp:
-		for id, rank in pr.items():
+		for id, rank in rank.items():
 			fp.write(str(id) + ',' + str(rank) + '\n')
 
-
-def stat_community():
-	with open('com-youtube.all.cmty.txt') as fp:
-		node_dict = {}
-		max = 0
-		for community_id, line in enumerate(fp):
-			nodes = map(int, line.split('\t'))
-			for node in nodes:
-				node_dict.setdefault(node, []).append(community_id)
-			max = community_id
-		print max
-			
-	with open('youtube.community.txt', 'w') as fp:
-		for node in sorted(node_dict.keys()):
-			community_list = node_dict[node]
-			fp.write(str(node) + ',')
-			str_list = map(str, sorted(community_list))
-			fp.write(','.join(str_list) + '\n')
-
-
-def stat_community2():
-	import numpy as np
-
-	with open('../dataset/dblp.all.cmty.txt') as fp:
-		node_dict = {}
-		for community_id, line in enumerate(fp):
-			num = len(line.split('\t'))
-			try:
-				node_dict[num] += 1
-			except KeyError:
-				node_dict[num] = 1
-			
-	keys = node_dict.keys()
-	keys.sort(reverse=True)
-	values = np.array([node_dict[key] for key in keys])
-	values = np.cumsum(values)
-	new_lines = [str(key) + ',' + str(value) + '\n' for key, value in zip(keys, values)]
-
-	with open('statistics.csv', 'w') as fp:
-		fp.writelines(new_lines) 
-
-
-alpha = 0.3
-beta = 0.49
-epsilon = 1e-10
-
-community_num = 14
-S_list = []
-for i in range(2, community_num):
-	for combination in itertools.combinations(range(community_num), i):
-		S_list.append(combination)
-S_num = len(S_list)
-
-C_indexes = [[j for j, S in enumerate(S_list) if i in S] for i in range(community_num)]
+	del G
 
 
 class Node:
 	def __init__(self):
-		self.P_array = np.zeros(community_num)
+		self.rank = 0.0
 		self.I_array = np.zeros(community_num)
 		self.H_array = np.zeros(S_num)
 		self.neighbors = []
+		self.community = 0
 
 	def add_neighbor(self, neighbor):
 		self.neighbors.append(neighbor)
 
-	def set_community(self, community, weight):
-		self.I_array[community] = weight
+	def set_community(self, community):
+		self.community = community
+
+	def set_page_rank(self, pagerank):
+		self.rank = pagerank
+
+	def get_str(self, id):
+		s2 = max(self.H_array * betas)
+		s3 = sum(self.I_array)
+		weight = int(s2 * 1e5) + int(s3 * 1e5 / community_num) / 1e5 + len(self.neighbors) / 1e9
 		
-	def update_P(self):
-		for community, I_value in enumerate(self.I_array):
-			self.P_array[community] = alpha * I_value + beta * max(self.H_array[C_indexes[community]])
+		return str(id) + ',' + str(weight) + '\n'
+		
 
-	def update_I(self, node_dict):
-		diff_abs = 0
-		for community, I_value in enumerate(self.I_array):
-			max_num = I_value
-			for neighbor in self.neighbors:
-				P_u = node_dict[neighbor].P_array[community]
-				if P_u > max_num:
-					max_num = P_u
-			self.I_array[community] = max_num
-			diff_abs += abs(I_value - max_num)
-		return diff_abs
-
-	def update_H(self):
-		for i in range(S_num):
-			self.H_array[i] = min(self.I_array[list(S_list[i])])
-
-
-def read_file(community_file, neighbor_file):
-	node_dict = {}
-	with open(community_file) as fp:
-		for i, line in enumerate(fp):
-			items = line.split(',')
-			node_id = int(items[0])
-			community_id = int(items[1])
-			weight = float(items[2])
-
-			node_dict[node_id] = Node()
-			node_dict[node_id].set_community(community_id, weight)
-			if i % 100000 == 0:
-				print 'community file line', i
-			# if i > 1:
-				# break
-	
+def read_file(rank_file, community_file, neighbor_file):
 	with open(neighbor_file) as fp:
+		first_line = fp.readline()
+		items = first_line.split(' ')
+		node_num = int(items[0])
+		node_list = [Node() for i in xrange(node_num)]
+
 		for i, line in enumerate(fp):
-			items = line.split(',')
+			items = line.split(' ')
 			fm = int(items[0])
 			to = int(items[1])
-			
-			node_dict[fm].add_neighbor(to)
-			node_dict[to].add_neighbor(fm)
+			node_list.[fm].add_neighbor(to)
+			node_list.[to].add_neighbor(fm)
 	
 			if i % 100000 == 0:
 				print 'neighbor file line', i
 
-	return node_dict
+	with open(community_file) as fp:
+		for i, line in enumerate(fp):
+			community = int(line[:-1])
+			node_list[node_id].set_community(community)
+
+			if i % 100000 == 0:
+				print 'community file line', i
+
+	with open(rank_file) as fp:
+		reader = csv.reader(fp, delimiter=',')
+		for i, line in enumerate(reader):
+			node_id = int(line[0])
+			rank = float(line[1])
+			node_list[node_id].set_page_rank(rank)
+
+			if i % 100000 == 0:
+				print 'rank file line', i
+
+	return node_list
 
 
-def write_file(result_file, node_dict):
+def write_file(result_file, node_list):
 	with open(result_file, 'w') as fp:
-		for id, node in node_dict.items():
-			fp.write(str(id))
-			for S, H_value in zip(S_list, node.H_array):
-				if H_value > 0:
-					fp.write(',(' + ','.join(map(str, S)) + '):')
-					fp.write(str(H_value))
-			fp.write('\n')
+		for id, node in node_list.items():
+			fp.write(node.get_str(id))
 
 
 def main():
-	community_file = '../dataset/egp.all.cmty.csv'
-	neighbor_file = '../dataset/egp.ungraph.csv'
-	result_file = 'dblp_his.csv'
+	community_file = 'dblp_community.txt'
+	neighbor_file = 'dblp_graph.txt'
+	rank_file = 'dblp_rank.txt'
+	result_file = 'result/dblp_his.csv'
 
-	node_dict = read_file(community_file, neighbor_file)
+	use_pagerank(neighbor_file, rank_file)
 
-	print 'initial H'
-	for i, node in enumerate(node_dict.values()):
-		node.update_H()
-		if i % 30 == 0:
-			print 'update H', i
+	use_times = []
+	for i in range(3):
+		node_list = read_file(rank_file, community_file, neighbor_file)
+	
+		print 'Running HIS'
+		start = clock()
+	
+		# inital I
+		for node in node_list:
+			for c in xrange(community_num):
+				if node.community & (1<<c):
+					node.I_array[c] = node.rank
+	
+		# initial heap
+		heap_list = []
+		entry_finder = {}
+		for node in node_list.values():
+			entry = [-node.rank, node]
+			entry_finder[node] = entry
+			heap_list.append(entry)
+		heapq.heapify(heap_list)
+	
+		while heap_list:
+			rank, node = heapq.heappop(heap_list)
+			del entry_finder[node]
+	
+			H_array = node.H_array
+			I_array = node.I_array
+	
+			# update H
+			H_array[0] = 1e100
+			c = 0
+			for S in xrange(1, S_num):
+				if not (S & (1<<c)): # c not in S
+					c += 1
+				H_array[S] = min(I_array[c], H_array[S ^ (1<<c)])
+	
+			# update P
+			beta_H = np.array([betas[S] * H_array[S] for S in xrange(S_num)])
+			exp_inf = np.array([max(beta_H[C_indexes[c]]) for c in xrange(community_num)])
+			P_array = alpha * I_array + exp_inf
+	
+			# update node's neighbors
+			for node_id in node.neighbors:
+				node_v = node_list[node_id]
+				for c in xrange(community_num):
+					P_u_c = P_array[c]
+					if P_u_c > node_v.I_array[c] + eps:
+						node_v.I_array[c] = P_u_c  # update neighbor's I
+	
+						if P_u_c > node_v.rank + eps:
+							node_v.rank = P_u_c
+	
+							if node_v in entry_finder:
+								entry_finder[node_v][0] = -P_u_c
+							else:
+								entry = [-P_u_c, node_v]
+								entry_finder[node_v] = entry
+								heapq.heappush(heap_list, entry)
+	
+		end = clock()
+		print 'HIS:', end - start
+		use_times.append(end - start)
 
+	print 'mean time', np.mean(use_times)
 
-	while 1:
-		diff_count = 0
-		print 'update P'
-		for node in node_dict.values():
-			node.update_P()
-		print 'update I, H'
-		for node in node_dict.values():
-			diff_count += node.update_I(node_dict)
-			node.update_H()
-
-		print 'difference', diff_count
-		if diff_count < epsilon:
-			break
-
-	write_file(result_file, node_dict)
+	write_file(result_file, node_list)
 
 
 if __name__ == '__main__':
