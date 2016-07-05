@@ -53,7 +53,7 @@ class Node:
 		self.weight = sum_1 * self.sum_2
 
 	# use in directed graph
-	def update_node_weight(self, node_list):
+	# def update_node_weight(self, node_list):
 		# temp_dict = deepcopy(self.to_edge_weights)
 		# for k in self.to_edge_weights.keys():
 		# 	try:
