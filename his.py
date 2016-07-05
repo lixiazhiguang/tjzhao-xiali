@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from time import clock
 import heapq
+import csv
 
 
 beta_table = [0, 0, 0.17, 0.25, 0.29, 0.30, 0.35]
@@ -96,7 +97,10 @@ def read_file(rank_file, community_file, neighbor_file):
 
 	with open(community_file) as fp:
 		for i, line in enumerate(fp):
-			community = int(line[:-1])
+			try:
+				community = int(line[:-1])
+			except:
+				print i, line
 			node_list[i].set_community(community)
 
 			if i % 100000 == 0:
@@ -117,7 +121,7 @@ def read_file(rank_file, community_file, neighbor_file):
 
 def write_file(result_file, node_list):
 	with open(result_file, 'w') as fp:
-		for id, node in node_list.items():
+		for id, node in node_list:
 			fp.write(node.get_str(id))
 
 
@@ -127,8 +131,8 @@ def main():
 	rank_file = 'twitter_rank.txt'
 	result_file = 'result/dblp_his.csv'
 
-	use_pagerank(neighbor_file, rank_file)
-	return
+	# use_pagerank(neighbor_file, rank_file)
+	# return
 
 	use_times = []
 	for i in range(3):
@@ -146,7 +150,7 @@ def main():
 		# initial heap
 		heap_list = []
 		entry_finder = {}
-		for node in node_list.values():
+		for node in node_list:
 			entry = [-node.rank, node]
 			entry_finder[node] = entry
 			heap_list.append(entry)
