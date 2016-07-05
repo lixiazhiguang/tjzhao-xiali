@@ -17,7 +17,10 @@ class Node:
 			t += len(node_list[k].neighbor_set & self.neighbor_set)
 
 		n = len(self.neighbor_set)
-		self.ES = n - t / n
+		try:
+			self.ES = n - t / n
+		except ZeroDivisionError, e:
+			self.ES = 0
 
 
 def read_file(file_name):
@@ -35,7 +38,7 @@ def read_file(file_name):
 			node_list[to].add_neighbor(fm)
 	
 			if i % 100000 == 0:
-				print i
+				print 'Reading file line', i
 
 	return node_list
 
@@ -51,18 +54,18 @@ def main():
 	write_file_name = 'result/dblp_es.csv'
 	
 	results = []
-	for i in range(5):
+	for i in range(20):
 		node_list = read_file(read_file_name)
 
 		a = clock()
-		for node in node_list.values():
+		for node in node_list:
 			node.compute_ES(node_list)
 		b = clock()
 
 		results.append(b - a)
-		print b - a
+		print "%.10f" % (b - a)
 
-	print 'mean', mean(results)
+	print 'mean', "%.10f" % mean(results)
 	write_file(write_file_name, node_list)
 
 
