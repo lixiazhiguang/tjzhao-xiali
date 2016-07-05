@@ -97,7 +97,7 @@ def read_file(rank_file, community_file, neighbor_file):
 	with open(community_file) as fp:
 		for i, line in enumerate(fp):
 			community = int(line[:-1])
-			node_list[node_id].set_community(community)
+			node_list[i].set_community(community)
 
 			if i % 100000 == 0:
 				print 'community file line', i
@@ -123,11 +123,12 @@ def write_file(result_file, node_list):
 
 def main():
 	community_file = 'dblp_community.txt'
-	neighbor_file = 'dblp_graph.txt'
-	rank_file = 'dblp_rank.txt'
+	neighbor_file = 'twitter_graph.txt'
+	rank_file = 'twitter_rank.txt'
 	result_file = 'result/dblp_his.csv'
 
 	use_pagerank(neighbor_file, rank_file)
+	return
 
 	use_times = []
 	for i in range(3):
