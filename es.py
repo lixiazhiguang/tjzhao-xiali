@@ -2,75 +2,68 @@ from __future__ import division
 from time import clock
 from numpy import mean
 
+
 class Node:
 	def __init__(self):
-		self.neighbors = []
 		self.neighbor_set = set()
 		self.ES = 0.0
 		
 	def add_neighbor(self, neighbor):
-		self.neighbors.append(neighbor)
+		self.neighbor_set.add(neighbor)
 
-	def initial(self, node_dict):
-		self.neighbor_set = set(self.neighbors)
-
-	def compute_ES(self, node_dict):
+	def compute_ES(self, node_list):
 		t = 0
 		for k in self.neighbor_set:
-			node_k = node_dict[k]
-			t += len(node_k.neighbor_set & self.neighbor_set)
+			t += len(node_list[k].neighbor_set & self.neighbor_set)
 
-		n = len(self.neighbors)
-
+		n = len(self.neighbor_set)
 		self.ES = n - t / n
 
 
 def read_file(file_name):
-	import csv
-
-	node_dict = {}
 	with open(file_name) as fp:
+		first_line = fp.readline()
+		items = first_line.split(' ')
+		node_num = int(items[0])
+		node_list = [Node() for i in xrange(node_num)]
+
 		for i, line in enumerate(fp):
-			if i < 4:
-				continue
-	
-			items = line.split(',')
+			items = line.split(' ')
 			fm = int(items[0])
 			to = int(items[1])
-	
-			node_dict.setdefault(fm, Node()).add_neighbor(to)
-			node_dict.setdefault(to, Node()).add_neighbor(fm)
+			node_list.[fm].add_neighbor(to)
+			node_list.[to].add_neighbor(fm)
 	
 			if i % 100000 == 0:
 				print i
 
-	return node_dict
+	return node_list
 
 
-def write_file(file_name, node_dict):
+def write_file(file_name, node_list):
 	with open(file_name, 'w') as fp:
-		for id, node in node_dict.items():
+		for id, node in enumerate(node_list):
 			fp.write(str(id) + ',' + str(node.ES) + '\n')
 
 
 def main():
-	# read_file_name = '1285-7524-14/egp.ungraph.csv'
-	# write_file_name = '1285-7524-14/es.csv'
-	read_file_name = '76853-133445-/73989-117699-13/wordnet3.upgraph.csv'
-	# write_file_name = '../dataset/twitter/es.csv'
-	nums = []
+	read_file_name = 'dblp_graph.txt'
+	write_file_name = 'result/dblp_es.csv'
+	
+	results = []
 	for i in range(5):
-		node_dict = read_file(read_file_name)
-		for node in node_dict.values():
-			node.initial(node_dict)
+		node_list = read_file(read_file_name)
+
 		a = clock()
-		for node in node_dict.values():
-			node.compute_ES(node_dict)
+		for node in node_list.values():
+			node.compute_ES(node_list)
 		b = clock()
-		nums.append(b - a)
+
+		results.append(b - a)
 		print b - a
-	# write_file(write_file_name, node_dict)
-	print 'mean', mean(nums)
+
+	print 'mean', mean(results)
+	write_file(write_file_name, node_list)
 
 
 if __name__ == '__main__':
