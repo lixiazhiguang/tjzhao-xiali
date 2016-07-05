@@ -21,10 +21,7 @@ class Node:
 			self.to_edge_weights = dict(zip(neighbors, [1 / len(neighbors)] * len(neighbors)))
 		else:
 			self.to_edge_weights = {}
-		self.neighbor_set = set()
-
-	def init_set(self):
-		self.neighbor_set = set(self.to_edge_weights.keys())
+		self.neighbor_set = set(neighbors)
 
 	def initial(self, node_list):
 		for k in self.neighbor_set:
@@ -51,27 +48,27 @@ class Node:
 					sum_temp += self.to_edge_weights[k] * node_list[k].to_edge_weights[j]
 			except KeyError, e:
 				pass
-			sum_1 += sum_temp ** 2
+			sum_1 += pow(sum_temp, 2)
 
 		self.weight = sum_1 * self.sum_2
 
 	# use in directed graph
-	# def update_node_weight(self, node_list):
-	# 	temp_dict = deepcopy(self.to_edge_weights)
-	# 	for k in self.to_edge_weights.keys():
-	# 		try:
-	# 			j_set = self.mutual_neighbor[k]
-	# 			temp_edge_weight = self.to_edge_weights[k]
-	# 			for j in j_set:
-	# 				temp_dict[j] += temp_edge_weight * node_list[k].to_edge_weights[j]
-	# 		except KeyError, e:
-	# 			pass
+	def update_node_weight(self, node_list):
+		# temp_dict = deepcopy(self.to_edge_weights)
+		# for k in self.to_edge_weights.keys():
+		# 	try:
+		# 		j_set = self.mutual_neighbor[k]
+		# 		temp_edge_weight = self.to_edge_weights[k]
+		# 		for j in j_set:
+		# 			temp_dict[j] += temp_edge_weight * node_list[k].to_edge_weights[j]
+		# 	except KeyError, e:
+		# 		pass
 
-	# 	sum_1 = 0.0
-	# 	for count_weight in temp_dict.values():
-	# 		sum_1 += count_weight
+		# sum_1 = 0.0
+		# for count_weight in temp_dict.values():
+		# 	sum_1 += count_weight ** 2
 
-	# 	self.weight = sum_1 * self.sum_2
+		# self.weight = sum_1 * self.sum_2
 
 	def update_edge_weight(self, node_list):
 		neighbor_weight_sum = 0
@@ -103,24 +100,26 @@ def read_data_file(file_name):
 		first_line = fp.readline()
 		items = first_line.split(' ')
 		node_num = int(items[0])
-		node_list = [Node() for i in xrange(node_num)]
+		neighbor_list = [[] for i in xrange(node_num)]
 
 		for i, line in enumerate(fp):
-			items = line.split(' ')
+			items = line[:-1].split(' ')
 			fm = int(items[0])
 			to = int(items[1])
-			node_list[fm].add_neighbor(to)
-			node_list[to].add_neighbor(fm)
+			neighbor_list[fm].append(to)
+			neighbor_list[to].append(fm)
 
-			if num % 100000 == 0:
-				print 'line', num
+			if i % 100000 == 0:
+				print 'line', i
+
+	node_list = [Node(node_id, neighbors) for node_id, neighbors in enumerate(neighbor_list)]
 
 	return node_list
 
 
 def write_data_file(file_name, node_list):
 	with open(file_name, 'w') as fp:
-		for node in node_list.values():
+		for node in node_list:
 			if node.weight > 0:
 				fp.write(str(node))
 				fp.write('\n')
@@ -131,16 +130,15 @@ def main(read_file, write_file):
 	node_list = read_data_file(read_file)
 	print 'Initialing'
 	c = clock()
-	for node in node_list.values():
-		node.init_set()
+	for node in node_list:
 		node.initial(node_list)
 
 	while 1:
 		a = clock()
-		for node in node_list.values():
+		for node in node_list:
 			node.update_node_weight(node_list)
 		diff_list = []
-		for node in node_list.values():
+		for node in node_list:
 			diff_list.extend(node.update_edge_weight(node_list))
 
 		# score = paired_distances(node_weight_array, temp_node_weight_array, metric='cosine')
