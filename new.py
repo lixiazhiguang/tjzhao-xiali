@@ -133,6 +133,7 @@ def main(read_file, write_file):
 	for node in node_list:
 		node.initial(node_list)
 
+	pre_score = 0
 	while 1:
 		a = clock()
 		for node in node_list:
@@ -142,10 +143,15 @@ def main(read_file, write_file):
 			diff_list.extend(node.update_edge_weight(node_list))
 
 		# score = paired_distances(node_weight_array, temp_node_weight_array, metric='cosine')
+		pre_score = score
 		score = np.sqrt((np.array(diff_list) ** 2).sum())
 		# print score
 		if score < 1e-10:
 			break
+
+		if pre_score > score and pre_score - score < 1e-6:
+			break:
+			
 		b = clock()
 		print b - a, score
 		nums.append(b - a)
