@@ -149,7 +149,7 @@ def main(read_file, write_file):
 		if score < 1e-10:
 			break
 
-		if pre_score > score and pre_score - score < 1e-6:
+		if pre_score < score and score - pre_score < 1e-6:
 			break
 
 		b = clock()
