@@ -150,7 +150,7 @@ def main(read_file, write_file):
 			break
 
 		if pre_score > score and pre_score - score < 1e-6:
-			break:
+			break
 
 		b = clock()
 		print b - a, score
