@@ -133,7 +133,7 @@ def main(read_file, write_file):
 	for node in node_list:
 		node.initial(node_list)
 
-	pre_score = 0
+	score = 1e-9
 	while 1:
 		a = clock()
 		for node in node_list:
@@ -151,7 +151,7 @@ def main(read_file, write_file):
 
 		if pre_score > score and pre_score - score < 1e-6:
 			break:
-			
+
 		b = clock()
 		print b - a, score
 		nums.append(b - a)
