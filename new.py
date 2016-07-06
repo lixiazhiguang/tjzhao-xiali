@@ -41,14 +41,14 @@ class Node:
 	def update_node_weight(self, node_list):
 		sum_1 = 0.0
 		for j in self.to_edge_weights.keys():
-			sum_temp = self.to_edge_weights[j] ** 2
+			sum_temp = self.to_edge_weights[j]
 			try:
 				k_set = self.mutual_neighbor[j]
 				for k in k_set:
 					sum_temp += self.to_edge_weights[k] * node_list[k].to_edge_weights[j]
 			except KeyError, e:
 				pass
-			sum_1 += sum_temp
+			sum_1 += sum_temp ** 2
 
 		self.weight = sum_1 * self.sum_2
 

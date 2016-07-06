@@ -17,21 +17,31 @@ def read_file(file_name):
 
 
 def write_file(G, file_name):
-	partition = cm.best_partition(G, resolution=2.0)
+	partition = cm.best_partition(G, resolution=10.0)
 
 	with open(file_name, 'w') as fp:
-		for node_id in sorted(partition.keys()):
-			fp.write(str(partition[node_id]) + '\n')
+		for node_id, c_id in partition.items():
+			fp.write(str(node_id) + ',' + str(c_id) + '\n')
+
+	return
 
 	community_num = len(set(partition.values()))
 	hist, bin_edges = np.histogram(partition.values(), bins=community_num)
-	for h in hist:
-		print h
+	indexes = np.arange(community_num)[hist>50]
+	index_map = dict(zip(indexes, range(len(indexes))))
+	print len(indexes)
+
+	with open(file_name, 'w') as fp:
+		for node_id, c_id in partition.items():
+			try:
+				fp.write(str(2**index_map[c_id]) + '\n')
+			except KeyError, e:
+				fp.write('0\n')
 
 
 def main():
-	read_file_name = 'dblp_graph.txt'
-	write_file_name = 'dblp_community2.txt'
+	read_file_name = 'inventor_graph.txt'
+	write_file_name = 'inventor_community2.txt'
 	G = read_file(read_file_name)
 	write_file(G, write_file_name)
 
